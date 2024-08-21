@@ -1,6 +1,8 @@
+import sys
 import json
 
 ALPHABET_LENGTH = 26
+O_INDEX_NOT_FOUND = -1
 
 
 class JSONFileError(Exception):
@@ -9,16 +11,24 @@ class JSONFileError(Exception):
 
 class Enigma:
     def __init__(self, hash_map, wheels, reflector_map):
-        self.hash_map = hash_map
+        self.hash_map_stoi = hash_map
+        self.hash_map_itos = {value: key for key, value in hash_map.items()}
         self.wheels = wheels
         self.reflector_map = reflector_map
 
+        self.original_wheels = wheels.copy()
+
+    def reload_wheels(self):
+        self.wheels = self.original_wheels.copy()
+
     def move_wheels(self, message_length):
         self.wheels[0] = self.wheels[0] % 8 + 1
+
         if message_length % 2 == 0:
             self.wheels[1] *= 2
         else:
             self.wheels[1] -= 1
+
         if message_length % 10 == 0:
             self.wheels[2] = 10
         elif message_length % 3 == 0:
@@ -30,11 +40,11 @@ class Enigma:
         return (self.wheels[0] * 2 - self.wheels[1] + self.wheels[2]) % ALPHABET_LENGTH
 
     def encrypt_letter(self, letter):
-        if not letter.isupper():
+        if not letter.islower():
             return letter
 
         # step 1
-        i = self.hash_map[letter]
+        i = self.hash_map_stoi[letter]
 
         # step 2
         if self.weird_value() != 0:
@@ -44,9 +54,9 @@ class Enigma:
 
         # steps 3, 4, 5, 6
         i %= ALPHABET_LENGTH
-        c1 = self.hash_map[i]
+        c1 = self.hash_map_itos[i]
         c2 = self.reflector_map[c1]
-        i = self.hash_map[c2]
+        i = self.hash_map_stoi[c2]
 
         # step 7
         if self.weird_value() != 0:
@@ -56,26 +66,38 @@ class Enigma:
 
         # steps 8, 9
         i %= ALPHABET_LENGTH
-        c3 = self.hash_map[i]
+        c3 = self.hash_map_itos[i]
 
         return c3
 
     def encrypt(self, message):
         message_length = 0
-        new_message = ""
+        encrypted_message = ""
         for c in message:
             message_length += 1
-            new_message += self.encrypt_letter(c)
-        self.move_wheels(message_length)
-        return new_message
+            encrypted_message += self.encrypt_letter(c)
+            self.move_wheels(message_length)
+        self.reload_wheels()
+        return encrypted_message
+
+    def encrypt_file(self, input_file_path):
+        encrypted_messages = []
+
+        with open(input_file_path, 'r') as input_file:
+            message = input_file.readline()
+            while message:
+                encrypted_messages.append(self.encrypt(message))
+                message = input_file.readline()
+
+        return encrypted_messages
 
 
-def load_enigma_from_path(path):
+def load_configuration_from_path(path):
     try:
         with open(path, 'r') as conf_file:
             conf_dict = json.load(conf_file)
-    except:
-        raise JSONFileError
+    except (FileNotFoundError, json.JSONDecodeError):
+        raise JSONFileError()
 
     return Enigma(
         conf_dict['hash_map'],
@@ -84,9 +106,44 @@ def load_enigma_from_path(path):
     )
 
 
+def handle_argparse():
+    try:
+        c_index = sys.argv.index('-c')
+        i_index = sys.argv.index('-i')
+    except ValueError:
+        print("Usage: python3 enigma.py -c <config_file> -i <input_file> -o <output_file>")
+        exit(1)
+
+    try:
+        o_index = sys.argv.index('-o')
+    except ValueError:
+        o_index = O_INDEX_NOT_FOUND
+
+    args_dict = {'config_file': sys.argv[c_index + 1], 'input_file': sys.argv[i_index + 1]}
+    if o_index != O_INDEX_NOT_FOUND:
+        args_dict['output_file'] = sys.argv[o_index + 1]
+
+    return args_dict
+
+
 def main():
-    pass
+    args = handle_argparse()
+    enigma = load_configuration_from_path(args['config_file'])
+
+    encrypted_messages = enigma.encrypt_file(args['input_file'])
+
+    if args.get('output_file'):
+        with open(args['output_file'], 'w') as output_file:
+            for cipher in encrypted_messages:
+                output_file.write(cipher)
+    else:
+        print(*encrypted_messages, sep='')
 
 
 if __name__ == "__main__":
     main()
+    # try:
+    #     main()
+    # except:
+    #     print("The enigma script has encountered an error")
+    #     exit(1)
