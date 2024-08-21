@@ -1,3 +1,4 @@
+
 ALPHABET_LENGTH = 26
 
 
@@ -54,3 +55,9 @@ class Enigma:
 
 def load_enigma_from_path(path):
     pass
+
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()
