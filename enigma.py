@@ -1,5 +1,10 @@
+import json
 
 ALPHABET_LENGTH = 26
+
+
+class JSONFileError(Exception):
+    pass
 
 
 class Enigma:
@@ -9,7 +14,7 @@ class Enigma:
         self.wheels = wheels
         self.reflector_map = reflector_map
 
-    def move_wheels (self, wheels , len):
+    def move_wheels(self, wheels, len):
         wheels[0] = wheels[0] % 8 + 1
         if len % 2 == 0:
             wheels[1] *= 2
@@ -47,17 +52,29 @@ class Enigma:
         wheels = self.wheels
         len = 0
         for c in message:
-            len +=1
+            len += 1
             self.new_message += self.encrypt_letter(c)
         self.move_wheels(wheels, len)
         return self.new_message
 
 
 def load_enigma_from_path(path):
-    pass
+    try:
+        with open(path, 'r') as conf_file:
+            conf_dict = json.load(conf_file)
+    except:
+        raise JSONFileError
+
+    return Enigma(
+        conf_dict['hash_map'],
+        conf_dict['wheels'],
+        conf_dict['reflector_map']
+    )
+
 
 def main():
     pass
+
 
 if __name__ == "__main__":
     main()
