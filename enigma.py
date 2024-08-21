@@ -140,9 +140,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # try:
-    #     main()
-    # except:
-    #     print("The enigma script has encountered an error")
-    #     exit(1)
+    try:
+        main()
+    except:
+        print("The enigma script has encountered an error")
+        exit(1)
