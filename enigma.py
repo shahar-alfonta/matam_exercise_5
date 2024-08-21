@@ -9,53 +9,65 @@ class JSONFileError(Exception):
 
 class Enigma:
     def __init__(self, hash_map, wheels, reflector_map):
-        self.new_message = None
         self.hash_map = hash_map
         self.wheels = wheels
         self.reflector_map = reflector_map
 
-    def move_wheels(self, wheels, len):
-        wheels[0] = wheels[0] % 8 + 1
-        if len % 2 == 0:
-            wheels[1] *= 2
+    def move_wheels(self, message_length):
+        self.wheels[0] = self.wheels[0] % 8 + 1
+        if message_length % 2 == 0:
+            self.wheels[1] *= 2
         else:
-            wheels[1] -= 1
-        if len % 10 == 0:
-            wheels[2] = 10
-        elif len % 3 == 0:
-            wheels[2] = 5
+            self.wheels[1] -= 1
+        if message_length % 10 == 0:
+            self.wheels[2] = 10
+        elif message_length % 3 == 0:
+            self.wheels[2] = 5
         else:
-            wheels[2] = 0
+            self.wheels[2] = 0
+
+    def weird_value(self):
+        return (self.wheels[0] * 2 - self.wheels[1] + self.wheels[2]) % ALPHABET_LENGTH
 
     def encrypt_letter(self, letter):
-        wheels = self.wheels
-        if letter.isupper():
-            i = self.hash_map[letter]
-            if (wheels[0] * 2 - wheels[1] + wheels[2]) % ALPHABET_LENGTH != 0:
-                i += (wheels[0] * 2 - wheels[1] + wheels[2]) % ALPHABET_LENGTH
-            else:
-                i += 1
-            i = i % ALPHABET_LENGTH
-            c1 = self.hash_map[i]
-            c2 = self.reflector_map[c1]
-            i = self.hash_map[c2]
-            if (wheels[0] * 2 - wheels[1] + wheels[2]) % ALPHABET_LENGTH != 0:
-                i -= (wheels[0] * 2 - wheels[1] + wheels[2]) % ALPHABET_LENGTH
-            else:
-                i -= 1
-            c3 = self.hash_map[i]
-            return c3
-        else:
+        if not letter.isupper():
             return letter
 
+        # step 1
+        i = self.hash_map[letter]
+
+        # step 2
+        if self.weird_value() != 0:
+            i += self.weird_value()
+        else:
+            i += 1
+
+        # steps 3, 4, 5, 6
+        i %= ALPHABET_LENGTH
+        c1 = self.hash_map[i]
+        c2 = self.reflector_map[c1]
+        i = self.hash_map[c2]
+
+        # step 7
+        if self.weird_value() != 0:
+            i -= self.weird_value()
+        else:
+            i -= 1
+
+        # steps 8, 9
+        i %= ALPHABET_LENGTH
+        c3 = self.hash_map[i]
+
+        return c3
+
     def encrypt(self, message):
-        wheels = self.wheels
-        len = 0
+        message_length = 0
+        new_message = ""
         for c in message:
-            len += 1
-            self.new_message += self.encrypt_letter(c)
-        self.move_wheels(wheels, len)
-        return self.new_message
+            message_length += 1
+            new_message += self.encrypt_letter(c)
+        self.move_wheels(message_length)
+        return new_message
 
 
 def load_enigma_from_path(path):
