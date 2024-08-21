@@ -40,9 +40,6 @@ class Enigma:
         return (self.wheels[0] * 2 - self.wheels[1] + self.wheels[2]) % ALPHABET_LENGTH
 
     def encrypt_letter(self, letter):
-        if not letter.islower():
-            return letter
-
         # step 1
         i = self.hash_map_stoi[letter]
 
@@ -71,12 +68,14 @@ class Enigma:
         return c3
 
     def encrypt(self, message):
-        message_length = 0
+        cipher_length = 0
         encrypted_message = ""
-        for c in message:
-            message_length += 1
-            encrypted_message += self.encrypt_letter(c)
-            self.move_wheels(message_length)
+        for letter in message:
+            if letter.islower():
+                cipher_length += 1
+                letter = self.encrypt_letter(letter)
+            encrypted_message += letter
+            self.move_wheels(cipher_length)
         self.reload_wheels()
         return encrypted_message
 
